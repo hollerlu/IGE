@@ -144,15 +144,22 @@ countryCounts <- dataFile %>%
   countryCounts$CountryName[countryCounts$CountryName == "U.S. Virgin Islands"] <- "U.S. Virgin Is."
   countryCounts$CountryName[countryCounts$CountryName == "United States"] <- "United States of America"
 
-  countryCounts <- countryCounts %>% summarise(TripCount = n(), ProgramNames = list(ProgramName))
-
-  # Putting the TripCounts into worldMap. Needed to first change NAME to CountryName
-  # so that the geographical data matches the dataset
-
+  #Needed to change NAME to CountryName so that the geographical data matches the dataset
   ### !!!DANGER!!! Need to make sure that NAME in every version of the program is
   # changed to CountryName so there are no errors
   colnames(worldMap)[colnames(worldMap) == "NAME"] <- "CountryName"
-  worldMap <- merge(worldMap, countryCounts, by = 'CountryName', all.x = TRUE)
+ 
+  # Creating the map
+  output$map <- renderLeaflet({
+    # Allows for the map to be filtered by Program Year
+    filteredCounts <- subset(countryCounts, ProgramYear >= input$yearRange[1] & ProgramYear <= input$yearRange[2])
+    
+    # Gets the counts of trips per country
+     filteredCounts <- filteredCounts %>% summarise(TripCount = n(), ProgramNames = list(ProgramName))
+
+  # Putting the TripCounts into worldMap. 
+
+  worldMap <- merge(worldMap, filteredCounts, by = 'CountryName', all.x = TRUE)
 
   # Set all other countries to 0 trips
   worldMap$TripCount <- replace(worldMap$TripCount, is.na(worldMap$TripCount), 0)
@@ -160,8 +167,7 @@ countryCounts <- dataFile %>%
 
   # Creating a color palette for the map
   paletteNum <- colorNumeric("Reds", domain = worldMap$TripCount)
-
-
+  
   # I'm not quite sure how this works, but it's the text that's displayed
   # whenever you hover over a country. The iterative code is so that the
   # programs appear as a list and not all in one row.
@@ -175,10 +181,9 @@ countryCounts <- dataFile %>%
   )
 }) %>%
 lapply(htmltools::HTML)
-
-
-  # Creating the map
-  output$map <- renderLeaflet({
+  
+  
+    
     # Sets how far you can zoom so you don't go past the borders
     leaflet(options = leafletOptions(minZoom = 2)) %>%
       # Sets the map
@@ -209,11 +214,21 @@ lapply(htmltools::HTML)
 # UI
 ui <- fluidPage(
   titlePanel("Student Travel Map"),
-  leafletOutput("map")
-
+  fluidRow(
+    column(width = 12,
+           leafletOutput("map")
+    )
+  ),
+  fluidRow(
+    column(width = 12,
+           sliderInput("yearRange", "Select Year Range:",
+                       min = min(dataFile$ProgramYear), max = max(dataFile$ProgramYear),
+                       value = c(min(dataFile$ProgramYear), max(dataFile$ProgramYear)), step = 1)
+    )
+  )
 )
 
 # Note: if you get a scrollbar in the middle of the page, increase the height or width
-shinyApp(ui = ui, server = server, options = list(width = 1000, height = 500))
+shinyApp(ui = ui, server = server, options = list(width = 1000, height = 800))
 
 ```
