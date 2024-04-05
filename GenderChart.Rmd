@@ -1,0 +1,115 @@
+---
+title: "IGEGenderVis"
+author: "Dylan Hong"
+date: "2024-04-05"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+
+# Read the dataset
+data <- read.csv("OCS Data 3-7.csv")
+
+# Aggregate data by Program Country and Gender
+gender_country_distribution <- data %>%
+  group_by(Program.Country, Gender) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+# Plot
+ggplot(gender_country_distribution, aes(fill=Gender, y=Count, x=Program.Country)) + 
+  geom_bar(position="stack", stat="identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Program Country", y = "Number of Students", title = "Study Abroad Participation by Gender and Country") +
+  scale_fill_manual(values=c("F"="#1f77b4", "M"="#ff7f0e"))
+
+```
+
+
+```{r}
+# Load necessary libraries
+library(plotly)
+library(dplyr)
+
+# Read the dataset
+data <- read.csv(OCS Data 3-7.csv")
+
+# Aggregate data by Program Country and Gender
+gender_country_distribution <- data %>%
+  group_by(Program.Country, Gender) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+# Convert to a plotly graph
+p <- gender_country_distribution %>%
+  plot_ly(x = ~Program.Country, y = ~Count, color = ~Gender, type = 'bar', 
+          colors = c("F" = '#1f77b4', "M" = '#ff7f0e')) %>%
+  layout(barmode = 'stack', xaxis = list(title = "Program Country"), 
+         yaxis = list(title = "Number of Students"),
+         title = "Study Abroad Participation by Gender and Country")
+
+# Add dropdown menu for country selection
+p <- p %>%
+  layout(
+    updatemenus = list(
+      list(
+        type = "dropdown",
+        buttons = list(
+          list(method = "restyle",
+               args = list("transforms[0].value", unique(gender_country_distribution$Program.Country)),
+               label = "All"),
+          lapply(unique(gender_country_distribution$Program.Country), function(country) {
+            list(method = "restyle",
+                 args = list("transforms[0].value", country),
+                 label = country)
+          })
+        )
+      )
+    ),
+    transforms = list(
+      list(
+        type = 'filter',
+        target = ~Program.Country,
+        operation = '=',
+        value = unique(gender_country_distribution$Program.Country)
+      )
+    )
+  )
+
+# Render the plot
+p
+```
+
+
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+
+# Read the dataset
+data <- read.csv("OCS Data 3-7.csv")
+
+# Prepare the data
+# Calculate the count of students by Program Country and Gender
+data_aggregated <- data %>%
+  group_by(Program.Country, Gender) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+# Create a bubble chart
+ggplot(data_aggregated, aes(x = Program.Country, y = Gender, size = Count, color = Gender)) +
+  geom_point(alpha=0.6) +
+  scale_size(range = c(3, 12)) + # Adjust the size range for bubbles as needed
+  labs(title = "Number of Students Studying Abroad by Country and Gender",
+       x = "Program Country",
+       y = "Gender",
+       size = "Number of Students") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + # Rotate x labels for better readability
+  scale_color_manual(values = c("F" = "#E69F00", "M" = "#56B4E9")) # Customize colors if desired
+
+# Note: Adjust the path to your actual CSV file location
+```
