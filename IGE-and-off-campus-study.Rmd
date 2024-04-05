@@ -26,28 +26,49 @@ dataFile <- read.csv("OCS Data 3-7.csv")
 
 
 # Changed column names, but just changed punctuation
-# HOWEVER, ProgramCountry was changed to NAME
-colnames(dataFile) <- c("ApplicationCycle", "Ethnicity", "AnticipatedCompletionDate", "ProgramName", "NAME", "ProgramCity", "ProgramRegion", "ApplicationID", "ProgramYear", "ProgramTerm", "ApplicationStatusAlias", "Gender", "PreferredGender")
+colnames(dataFile) <- c("ApplicationCycle", "Ethnicity", "AnticipatedCompletionDate", "ProgramName", "CountryName", "ProgramCity", "ProgramRegion", "ApplicationID", "ProgramYear", "ProgramTerm", "ApplicationStatusAlias", "Gender", "PreferredGender")
 
 
 # Replaced "Non-resident alien" with "International student"
 dataFile$Ethnicity <- ifelse(dataFile$Ethnicity == "Non-resident alien", "International student", dataFile$Ethnicity)
 
+# Replaced "*<B>Grinnell-in-London</B>" with "Grinnell in London"
+dataFile$ProgramName <- ifelse(dataFile$ProgramName == "*<B>Grinnell-in-London</B>", "Grinnell in London", dataFile$ProgramName)
 
-# Create a dataframe of countries and the number of students who have visited them
-countryCounts <- dataFile %>%
-  group_by(NAME) %>%
-  summarise(TripCount = n(), ProgramNames = list(ProgramName))
+
+#Adjusted region names to match IEE classification
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "Latin America", "Latin America and Caribbean", dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "South America", "Latin America and Caribbean", dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "Caribbean", "Latin America and Caribbean", dataFile$ProgramRegion)
+
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "Middle East", "MENA", dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "Southeast Asia", "Asia", dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "South Asia", "Asia", dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "East Asia", "Asia", dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "Central Asia", "Asia", dataFile$ProgramRegion)
+
+
+dataFile$ProgramRegion <- ifelse(dataFile$CountryName == "Tunisia", "MENA", dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$CountryName == "Cameroon", "Sub-Saharan Africa", dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$CountryName == "Kenya", "Sub-Saharan Africa", dataFile$ProgramRegion)
+
+
+
 ```
 
 ```{r Code, echo=FALSE, eval=FALSE}
-
-# Note 1: Making the table show with the Shiny at the same time doesn't work. You have to
-# comment out runtime:shiny from the header and comment out the shiny functions to show the 
-# table. I should figure out a better way of doing this.
-
-# Note 2: This code chunk is good for looking at the data. Set eval=FALSE in the header when
-# you want this code not to run.
+# Note 1: This code chunk is good for looking at the data. Set eval=TRUE in the header when
+# you want this code to run.
 
 
 # Includes years as well as semesters
@@ -68,7 +89,7 @@ unique(dataFile$ProgramName)
 
 
 # Nothing to say, maybe ask if there are any issues?
-unique(dataFile$NAME)
+unique(dataFile$CountryName)
 
 
 # Includes "undefined", and U.S. cities include states
@@ -111,65 +132,58 @@ server <- function(input, output) {
   # Reading in the country information
   worldMap <- read_sf("ne_50m_admin_0_countries.shp")
 
+# Create a dataframe of countries and the number of students who have visited them
+countryCounts <- dataFile %>%
+  group_by(CountryName)
 
-  # Putting the TripCounts into worldMap. I changed the name of ProgramCountry
-  # to NAME to make the merge command work easier. That is dumb and I should probably
-  # fix it at some point.
-  worldMap <- merge(worldMap, countryCounts, by = 'NAME', all.x = TRUE)
+
+  # Changing country names to match the names in worldMap:
+  countryCounts$CountryName[countryCounts$CountryName == "Czech Republic"] <- "Czechia"
+  countryCounts$CountryName[countryCounts$CountryName == "French Polynesia"] <- "Fr. Polynesia"
+  countryCounts$CountryName[countryCounts$CountryName == "Turks and Caicos Islands"] <- "Turks and Caicos Is."
+  countryCounts$CountryName[countryCounts$CountryName == "U.S. Virgin Islands"] <- "U.S. Virgin Is."
+  countryCounts$CountryName[countryCounts$CountryName == "United States"] <- "United States of America"
+
+  #Needed to change NAME to CountryName so that the geographical data matches the dataset
+  ### !!!DANGER!!! Need to make sure that NAME in every version of the program is
+  # changed to CountryName so there are no errors
+  colnames(worldMap)[colnames(worldMap) == "NAME"] <- "CountryName"
+ 
+  # Creating the map
+  output$map <- renderLeaflet({
+    # Allows for the map to be filtered by Program Year
+    filteredCounts <- subset(countryCounts, ProgramYear >= input$yearRange[1] & ProgramYear <= input$yearRange[2])
+    
+    # Gets the counts of trips per country
+     filteredCounts <- filteredCounts %>% summarise(TripCount = n(), ProgramNames = list(ProgramName))
+
+  # Putting the TripCounts into worldMap. 
+
+  worldMap <- merge(worldMap, filteredCounts, by = 'CountryName', all.x = TRUE)
 
   # Set all other countries to 0 trips
   worldMap$TripCount <- replace(worldMap$TripCount, is.na(worldMap$TripCount), 0)
-
-
-
-  # The merging gets rid of:
-  # Czech Republic 58
-  # French Polynesia 1
-  # Turks and Caicos Islands 6
-  # U.S. Virgin Islands 2
-  # United States 78
   
-  # Due to using different spellings for the country names:
-  # Czechia
-  # Fr. Polynesia
-  # Turks and Caicos Is.
-  # U.S. Virgin Is.
-  # United States of America
-  
-  # Also, the programs are lost, but I haven't figured out how to
-  # add them back in since I don't wanna do it manually.
-
-
-  # Manually adding in the values for these countries
-  worldMap <- worldMap %>%  mutate(TripCount = ifelse(NAME == "Czechia", 58, TripCount))
-  worldMap <- worldMap %>%  mutate(TripCount = ifelse(NAME == "Fr. Polynesia", 1, TripCount))
-  worldMap <- worldMap %>%  mutate(TripCount = ifelse(NAME == "Turks and Caicos Is.", 6, TripCount))
-  worldMap <- worldMap %>%  mutate(TripCount = ifelse(NAME == "U.S. Virgin Is.", 2, TripCount))
-  worldMap <- worldMap %>%  mutate(TripCount = ifelse(NAME == "United States of America", 78, TripCount))
-
-
 
   # Creating a color palette for the map
   paletteNum <- colorNumeric("Reds", domain = worldMap$TripCount)
-
-
+  
   # I'm not quite sure how this works, but it's the text that's displayed
   # whenever you hover over a country. The iterative code is so that the
   # programs appear as a list and not all in one row.
   hoverText <- lapply(seq(nrow(worldMap)), function(i) {
-  unique_programs <- unique(worldMap$ProgramNames[[i]])
+  uniquePrograms <- unique(worldMap$ProgramNames[[i]])
   paste(
-    "Country: ", worldMap$NAME[i], "<br/>",
+    "Country: ", worldMap$CountryName[i], "<br/>",
     "Visits: ", worldMap$TripCount[i], "<br/>",
-    "Programs: ", paste(unique_programs, collapse = "<br/>"),
+    #"Programs: ", paste(uniquePrograms, collapse = "<br/>"),
     sep = ""
   )
 }) %>%
 lapply(htmltools::HTML)
-
-
-  # Creating the map
-  output$map <- renderLeaflet({
+  
+  
+    
     # Sets how far you can zoom so you don't go past the borders
     leaflet(options = leafletOptions(minZoom = 2)) %>%
       # Sets the map
@@ -200,11 +214,21 @@ lapply(htmltools::HTML)
 # UI
 ui <- fluidPage(
   titlePanel("Student Travel Map"),
-  leafletOutput("map")
-
+  fluidRow(
+    column(width = 12,
+           leafletOutput("map")
+    )
+  ),
+  fluidRow(
+    column(width = 12,
+           sliderInput("yearRange", "Select Year Range:",
+                       min = min(dataFile$ProgramYear), max = max(dataFile$ProgramYear),
+                       value = c(min(dataFile$ProgramYear), max(dataFile$ProgramYear)), step = 1)
+    )
+  )
 )
 
 # Note: if you get a scrollbar in the middle of the page, increase the height or width
-shinyApp(ui = ui, server = server, options = list(width = 1000, height = 500))
+shinyApp(ui = ui, server = server, options = list(width = 1000, height = 800))
 
 ```
