@@ -1,0 +1,71 @@
+---
+title: "line-chart-vis"
+author: "Ishita Sarraf"
+date: "2024-04-03"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+```{r}
+dataFile <- read.csv("https://raw.githubusercontent.com/hollerlu/IGE/main/Updated%20OCS%20Dataset")
+```
+
+```{r}
+
+# Create a dataframe of countries and the number of students who have visited them
+countryCounts <- dataFile %>%
+  group_by(ProgramRegion) %>%
+  summarise(TripCount = n(), ProgramNames = list(ProgramName))
+```
+
+```{r}
+library(ggplot2)
+d <- dataFile %>%
+  group_by(ProgramRegion, ProgramYear) %>%
+  summarize(TripCount = n()) %>%
+  select(ProgramRegion, TripCount, ProgramYear)
+```
+
+
+```{r}
+library(shiny)
+
+# Define UI
+ui <- fluidPage(
+  titlePanel("Line Graph"),
+  sidebarLayout(
+    sidebarPanel(
+      checkboxGroupInput("region", "Select Region(s):",
+                         choices = unique(d$ProgramRegion),
+                         selected = unique(d$ProgramRegion[d$ProgramRegion != "Europe"]))
+    ),
+    mainPanel(
+      plotOutput("lineplot")
+    )
+  )
+  
+)
+
+# Define server logic
+server <- function(input, output) {
+  output$lineplot <- renderPlot({
+    # Filter data based on selected regions
+    filtered_data <- d[d$ProgramRegion %in% input$region, ]
+    
+    # Create line graph
+    ggplot(data = filtered_data, aes(x = ProgramYear, y = TripCount, color = ProgramRegion)) +
+      geom_line(size = 1) +
+      labs(x = "Year", y = "Trip Count", title = "Trip Count by Region Over Time") +
+      theme_minimal()
+  })
+  
+}
+
+# Run the application
+shinyApp(ui = ui, server = server)
+```
+
