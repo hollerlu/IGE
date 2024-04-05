@@ -22,8 +22,9 @@ library(RColorBrewer)
 
 
 # Change the file location once I figure out what it's supposed to be
-dataFile <- read.csv("OCS Data 3-7.csv")
+dataFile <- read.csv("https://raw.githubusercontent.com/hollerlu/IGE/main/OCS%20Data%203-7.csv")
 
+activePrograms <- read.csv("https://raw.githubusercontent.com/hollerlu/IGE/main/OCS%2024-25%20Active%20Programs.csv", header = TRUE, stringsAsFactors = FALSE)
 
 # Changed column names, but just changed punctuation
 colnames(dataFile) <- c("ApplicationCycle", "Ethnicity", "AnticipatedCompletionDate", "ProgramName", "CountryName", "ProgramCity", "ProgramRegion", "ApplicationID", "ProgramYear", "ProgramTerm", "ApplicationStatusAlias", "Gender", "PreferredGender")
@@ -128,61 +129,61 @@ unique(dataFile$PreferredGender)
 
 ```{r App, echo=FALSE}
 server <- function(input, output) {
-
+  
   # Reading in the country information
   worldMap <- read_sf("ne_50m_admin_0_countries.shp")
-
-# Create a dataframe of countries and the number of students who have visited them
-countryCounts <- dataFile %>%
-  group_by(CountryName)
-
-
+  
+  # Create a dataframe of countries and the number of students who have visited them,
+  # but only for active programs
+  countryCounts <- dataFile %>%
+    filter(ProgramName %in% activePrograms$Program.Name) %>%
+    group_by(CountryName)
+  
+  
   # Changing country names to match the names in worldMap:
   countryCounts$CountryName[countryCounts$CountryName == "Czech Republic"] <- "Czechia"
   countryCounts$CountryName[countryCounts$CountryName == "French Polynesia"] <- "Fr. Polynesia"
   countryCounts$CountryName[countryCounts$CountryName == "Turks and Caicos Islands"] <- "Turks and Caicos Is."
   countryCounts$CountryName[countryCounts$CountryName == "U.S. Virgin Islands"] <- "U.S. Virgin Is."
   countryCounts$CountryName[countryCounts$CountryName == "United States"] <- "United States of America"
-
-  #Needed to change NAME to CountryName so that the geographical data matches the dataset
-  ### !!!DANGER!!! Need to make sure that NAME in every version of the program is
-  # changed to CountryName so there are no errors
+  
+  # Need to change NAME to CountryName so that the geographical data matches the dataset
   colnames(worldMap)[colnames(worldMap) == "NAME"] <- "CountryName"
- 
+  
   # Creating the map
   output$map <- renderLeaflet({
     # Allows for the map to be filtered by Program Year
     filteredCounts <- subset(countryCounts, ProgramYear >= input$yearRange[1] & ProgramYear <= input$yearRange[2])
     
     # Gets the counts of trips per country
-     filteredCounts <- filteredCounts %>% summarise(TripCount = n(), ProgramNames = list(ProgramName))
-
-  # Putting the TripCounts into worldMap. 
-
-  worldMap <- merge(worldMap, filteredCounts, by = 'CountryName', all.x = TRUE)
-
-  # Set all other countries to 0 trips
-  worldMap$TripCount <- replace(worldMap$TripCount, is.na(worldMap$TripCount), 0)
-  
-
-  # Creating a color palette for the map
-  paletteNum <- colorNumeric("Reds", domain = worldMap$TripCount)
-  
-  # I'm not quite sure how this works, but it's the text that's displayed
-  # whenever you hover over a country. The iterative code is so that the
-  # programs appear as a list and not all in one row.
-  hoverText <- lapply(seq(nrow(worldMap)), function(i) {
-  uniquePrograms <- unique(worldMap$ProgramNames[[i]])
-  paste(
-    "Country: ", worldMap$CountryName[i], "<br/>",
-    "Visits: ", worldMap$TripCount[i], "<br/>",
-    #"Programs: ", paste(uniquePrograms, collapse = "<br/>"),
-    sep = ""
-  )
-}) %>%
-lapply(htmltools::HTML)
-  
-  
+    filteredCounts <- filteredCounts %>% summarise(TripCount = n(), ProgramNames = list(ProgramName))
+    
+    # Putting the TripCounts into worldMap. 
+    
+    worldMap <- merge(worldMap, filteredCounts, by = 'CountryName', all.x = TRUE)
+    
+    # Set all other countries to 0 trips
+    worldMap$TripCount <- replace(worldMap$TripCount, is.na(worldMap$TripCount), 0)
+    
+    
+    # Creating a color palette for the map
+    paletteNum <- colorNumeric("Reds", domain = worldMap$TripCount)
+    
+    # When a country is clicked on, makes a popup box that shows its name,
+    # how many visits it's had, and links to its active programs.
+    popupText <- lapply(seq(nrow(worldMap)), function(i) {
+      unique_programs <- unique(worldMap$ProgramNames[[i]])
+      program_links <- paste("<a href='", activePrograms$TD.link[activePrograms$Program.Name %in% unique_programs], "'>", unique_programs, "</a>", collapse = "<br/>")
+      paste(
+        "Country: ", worldMap$CountryName[i], "<br/>",
+        "Visits: ", worldMap$TripCount[i], "<br/>",
+        "Programs: ", paste(program_links, collapse = "<br/>"),
+        sep = ""
+      )
+    }) %>%
+      lapply(htmltools::HTML)
+    
+    
     
     # Sets how far you can zoom so you don't go past the borders
     leaflet(options = leafletOptions(minZoom = 2)) %>%
@@ -195,20 +196,14 @@ lapply(htmltools::HTML)
       # Adds the actual chloropleth map for each country based on how many visits
       addPolygons(data = worldMap, fillColor = ~paletteNum(worldMap$TripCount), weight = 1,
                   color = 'black', smoothFactor = .3, fillOpacity = .75,
-                  label = hoverText,
-                  labelOptions = labelOptions(
-                    style = list("font-weight" = "normal", padding = "3px 8px"),
-                    textsize = "13px",
-                    direction = "auto"
-                  )
-      ) %>%
+                  popup = popupText) %>%
       # Adds a legend
       addLegend(pal = paletteNum, values = worldMap$TripCount,
                 title = '<small>Number of students<br>who have visited</small>',
                 position = 'bottomleft')
   })
-
-
+  
+  
 }
 
 # UI
