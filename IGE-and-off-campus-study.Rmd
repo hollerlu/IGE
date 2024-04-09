@@ -54,8 +54,10 @@ server <- function(input, output) {
   
   # Creating the map
   output$map <- renderLeaflet({
-    # Allows for the map to be filtered by Program Year
-    filteredCounts <- subset(countryCounts, ProgramYear >= input$yearRange[1] & ProgramYear <= input$yearRange[2])
+    
+    
+    # Allows for the map to be filtered by Academic Year
+    filteredCounts <- subset(countryCounts, StartYear >= input$yearRange[1] & StartYear <= input$yearRange[2])
     
     # Gets the counts of trips per country
     filteredCounts <- filteredCounts %>% summarise(TripCount = n(), ProgramNames = list(ProgramName))
@@ -74,12 +76,12 @@ server <- function(input, output) {
     # When a country is clicked on, makes a popup box that shows its name,
     # how many visits it's had, and links to its active programs.
     popupText <- lapply(seq(nrow(worldMap)), function(i) {
-      unique_programs <- unique(worldMap$ProgramNames[[i]])
-      program_links <- paste("<a href='", activePrograms$TD.link[activePrograms$Program.Name %in% unique_programs], "'>", unique_programs, "</a>", collapse = "<br/>")
+      uniquePrograms <- unique(worldMap$ProgramNames[[i]])
+      programLinks <- paste("<a href='", activePrograms$TD.link[activePrograms$Program.Name %in% uniquePrograms], "'>", uniquePrograms, "</a>", collapse = "<br/>")
       paste(
         "Country: ", worldMap$CountryName[i], "<br/>",
         "Visits: ", worldMap$TripCount[i], "<br/>",
-        "Programs: ", paste(program_links, collapse = "<br/>"),
+        "Programs: ", paste(programLinks, collapse = "<br/>"),
         sep = ""
       )
     }) %>%
@@ -119,8 +121,8 @@ ui <- fluidPage(
   fluidRow(
     column(width = 12,
            sliderInput("yearRange", "Select Year Range:",
-                       min = min(dataFile$ProgramYear), max = max(dataFile$ProgramYear),
-                       value = c(min(dataFile$ProgramYear), max(dataFile$ProgramYear)), step = 1)
+                       min = min(dataFile$StartYear), max = max(dataFile$StartYear),
+                       value = c(min(dataFile$StartYear), max(dataFile$StartYear)), step = 1)
     )
   )
 )
