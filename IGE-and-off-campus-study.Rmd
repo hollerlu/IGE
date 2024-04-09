@@ -22,114 +22,17 @@ library(RColorBrewer)
 
 
 # Change the file location once I figure out what it's supposed to be
-dataFile <- read.csv("https://raw.githubusercontent.com/hollerlu/IGE/main/OCS%20Data%203-7.csv")
-
-activePrograms <- read.csv("https://raw.githubusercontent.com/hollerlu/IGE/main/OCS%2024-25%20Active%20Programs.csv", header = TRUE, stringsAsFactors = FALSE)
-
-# Changed column names, but just changed punctuation
-colnames(dataFile) <- c("ApplicationCycle", "Ethnicity", "AnticipatedCompletionDate", "ProgramName", "CountryName", "ProgramCity", "ProgramRegion", "ApplicationID", "ProgramYear", "ProgramTerm", "ApplicationStatusAlias", "Gender", "PreferredGender")
-
-
-# Replaced "Non-resident alien" with "International student"
-dataFile$Ethnicity <- ifelse(dataFile$Ethnicity == "Non-resident alien", "International student", dataFile$Ethnicity)
-
-# Replaced "*<B>Grinnell-in-London</B>" with "Grinnell in London"
-dataFile$ProgramName <- ifelse(dataFile$ProgramName == "*<B>Grinnell-in-London</B>", "Grinnell in London", dataFile$ProgramName)
-
-
-#Adjusted region names to match IEE classification
-
-dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "Latin America", "Latin America and Caribbean", dataFile$ProgramRegion)
-
-dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "South America", "Latin America and Caribbean", dataFile$ProgramRegion)
-
-dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "Caribbean", "Latin America and Caribbean", dataFile$ProgramRegion)
-
-
-dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "Middle East", "MENA", dataFile$ProgramRegion)
-
-dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "Southeast Asia", "Asia", dataFile$ProgramRegion)
-
-dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "South Asia", "Asia", dataFile$ProgramRegion)
-
-dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "East Asia", "Asia", dataFile$ProgramRegion)
-
-dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "Central Asia", "Asia", dataFile$ProgramRegion)
-
-
-dataFile$ProgramRegion <- ifelse(dataFile$CountryName == "Tunisia", "MENA", dataFile$ProgramRegion)
-
-dataFile$ProgramRegion <- ifelse(dataFile$CountryName == "Cameroon", "Sub-Saharan Africa", dataFile$ProgramRegion)
-
-dataFile$ProgramRegion <- ifelse(dataFile$CountryName == "Kenya", "Sub-Saharan Africa", dataFile$ProgramRegion)
-
-
-
-```
-
-```{r Code, echo=FALSE, eval=FALSE}
-# Note 1: This code chunk is good for looking at the data. Set eval=TRUE in the header when
-# you want this code to run.
-
-
-# Includes years as well as semesters
-unique(dataFile$ApplicationCycle)
-
-
-# Has blank values, "Non-resident alien" has been replaced
-unique(dataFile$Ethnicity)
-
-
-# Has blank values
-unique(dataFile$AnticipatedCompletionDate)
-
-
-# "X - ", "x - " and "X-" are individual programs (ask about program abbreviations, i.e. IES)
-# Fix "*<B>Grinnell-in-London</B>"
-unique(dataFile$ProgramName)
-
-
-# Nothing to say, maybe ask if there are any issues?
-unique(dataFile$CountryName)
-
-
-# Includes "undefined", and U.S. cities include states
-unique(dataFile$ProgramCity)
-
-
-# Some regions overlap
-unique(dataFile$ProgramRegion)
-
-
-# I think these aren't all unique numbers? 1353/1639
-unique(dataFile$ApplicationID)
-
-
-# Just years, nothing to say
-unique(dataFile$ProgramYear)
-
-
-# "Academic Year", "Fall", and "Spring"
-unique(dataFile$ProgramTerm)
-
-
-# "Approved" and "Intend to Participate"
-unique(dataFile$ApplicationStatusAlias)
-
-
-# "M" and "F"
-unique(dataFile$Gender)
-
-
-# Only value is "NA"
-unique(dataFile$PreferredGender)
-
-
+dataFile <- read.csv("https://raw.githubusercontent.com/hollerlu/IGE/main/Updated%20OCS%20Data%203-7.csv")
 ```
 
 ```{r App, echo=FALSE}
 server <- function(input, output) {
   
+  activePrograms <- read.csv("https://raw.githubusercontent.com/hollerlu/IGE/main/OCS%2024-25%20Active%20Programs.csv", header = TRUE, stringsAsFactors = FALSE)
+  
+  # Fix Grinnell in London's name
+  activePrograms$Program.Name <- ifelse(activePrograms$Program.Name == " *Grinnell-in-London", "Grinnell in London", activePrograms$Program.Name)
+
   # Reading in the country information
   worldMap <- read_sf("ne_50m_admin_0_countries.shp")
   
@@ -138,7 +41,6 @@ server <- function(input, output) {
   countryCounts <- dataFile %>%
     filter(ProgramName %in% activePrograms$Program.Name) %>%
     group_by(CountryName)
-  
   
   # Changing country names to match the names in worldMap:
   countryCounts$CountryName[countryCounts$CountryName == "Czech Republic"] <- "Czechia"
