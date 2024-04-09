@@ -1,0 +1,161 @@
+---
+title: "Data Cleaning"
+author: "Lucas Holler"
+date: "2024-04-08"
+output: html_document
+---
+
+```{r Cleaning, echo=FALSE}
+library(dplyr)
+# Reading the original data file from github
+dataFile <- read.csv("https://raw.githubusercontent.com/hollerlu/IGE/main/OCS%20Data%203-7.csv")
+
+# Changed column names, but just changed punctuation
+colnames(dataFile) <- c("ApplicationCycle", "Ethnicity", "AnticipatedCompletionDate", "ProgramName", "CountryName", "ProgramCity", "ProgramRegion", "ApplicationID", "ProgramYear", "ProgramTerm", "ApplicationStatusAlias", "Gender", "PreferredGender")
+
+
+# Replaced "Non-resident alien" with "International student"
+dataFile$Ethnicity <- ifelse(dataFile$Ethnicity == "Non-resident alien", "International student", dataFile$Ethnicity)
+
+# Replaced "*<B>Grinnell-in-London</B>" with "Grinnell in London"
+dataFile$ProgramName <- ifelse(dataFile$ProgramName == "*<B>Grinnell-in-London</B>", "Grinnell in London", dataFile$ProgramName)
+
+# Remove duplicate Grinnell in London entries
+dataFile <- dataFile[dataFile$ProgramCity != "undefined", ]
+
+
+#Adjusted region names to match IEE classification
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "Latin America", "Latin America and Caribbean", dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "South America", "Latin America and Caribbean", dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "Caribbean", "Latin America and Caribbean", dataFile$ProgramRegion)
+
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "Middle East", "MENA", dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "Southeast Asia", "Asia", dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "South Asia", "Asia", dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "East Asia", "Asia", dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == "Central Asia", "Asia", dataFile$ProgramRegion)
+
+
+dataFile$ProgramRegion <- ifelse(dataFile$CountryName == "Tunisia", "MENA", dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$CountryName == "Cameroon", "Sub-Saharan Africa", dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$CountryName == "Kenya", "Sub-Saharan Africa", dataFile$ProgramRegion)
+
+
+# add academic year column
+# there's definitely a better way to do this 
+# essentially match funtion
+assign_year <- function(app_cycle) {
+  # combine specific dates per year
+  if (app_cycle == "Academic Year 2016" || app_cycle == "Fall 2016" || app_cycle == "Spring 2017") {
+    # dataFile["AcademicYear"] <- "2016-2017"
+    return("2016-2017")
+  } 
+  
+  else if (app_cycle == "Academic Year 2017" || app_cycle == "Fall 2017" || app_cycle == "Spring 2018") {
+    return("2017-2018")
+  } 
+  
+  else if (app_cycle == "Academic Year 2018" || app_cycle == "Fall 2018" || app_cycle == "Spring 2019") {
+    return("2018-2019")
+  } 
+  
+  else if (app_cycle == "Academic Year 2019" || app_cycle == "Fall 2019" || app_cycle == "Spring 2020") {
+    return("2019-2020")
+  } 
+  
+  else if (app_cycle == "Academic Year 2020" || app_cycle == "Fall 2020" || app_cycle == "Spring 2021") {
+    return("2020-2021")
+  } 
+  
+  else if (app_cycle == "Academic Year 2021" || app_cycle == "Fall 2021" || app_cycle == "Spring 2022") {
+    return("2021-2022")
+  } 
+  
+  else if (app_cycle == "Academic Year 2022" || app_cycle == "Fall 2022" || app_cycle == "Spring 2023") {
+    return("2022-2023")
+  } 
+  
+  else if (app_cycle == "Academic Year 2023" || app_cycle == "Fall 2023" || app_cycle == "Spring 2024") {
+    return("2023-2024")
+  } else {
+    return("NA")
+  }
+}
+
+for (i in 1:nrow(dataFile)) {
+  dataFile$AcademicYear[i] <- assign_year(dataFile$ApplicationCycle[i])
+}
+
+```
+
+```{r Writing, echo=FALSE, eval=TRUE}
+# Save the new data file to your repository
+write.csv(dataFile, file = "Updated OCS Data 3-7.csv", row.names = TRUE)
+```
+
+```{r Display, echo=FALSE, eval=TRUE}
+# Note 1: This code chunk is good for looking at the data. Set eval=TRUE in the header when
+# you want this code to run.
+
+
+# Includes years as well as semesters
+unique(dataFile$ApplicationCycle)
+
+
+# Has blank values, "Non-resident alien" has been replaced
+unique(dataFile$Ethnicity)
+
+
+# Has blank values
+unique(dataFile$AnticipatedCompletionDate)
+
+
+# "X - ", "x - " and "X-" are individual programs (ask about program abbreviations, i.e. IES)
+# Fix "*<B>Grinnell-in-London</B>"
+unique(dataFile$ProgramName)
+
+# Nothing to say, maybe ask if there are any issues?
+unique(dataFile$CountryName)
+
+
+# Includes "undefined", and U.S. cities include states
+unique(dataFile$ProgramCity)
+
+
+# Some regions overlap
+unique(dataFile$ProgramRegion)
+
+
+# I think these aren't all unique numbers? 1353/1639
+unique(dataFile$ApplicationID)
+
+
+# Just years, nothing to say
+unique(dataFile$ProgramYear)
+
+
+# "Academic Year", "Fall", and "Spring"
+unique(dataFile$ProgramTerm)
+
+
+# "Approved" and "Intend to Participate"
+unique(dataFile$ApplicationStatusAlias)
+
+
+# "M" and "F"
+unique(dataFile$Gender)
+
+
+# Only value is "NA"
+unique(dataFile$PreferredGender)
+```
