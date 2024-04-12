@@ -1,0 +1,104 @@
+---
+title: "financial-viz"
+author: "Ishita Sarraf"
+date: "2024-04-05"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+finData <- read.csv("https://raw.githubusercontent.com/hollerlu/IGE/main/OCS%20Program%20Cost%20Comparison.csv")
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(plotly)
+library(shiny)
+```
+
+```{r}
+finData <- finData %>% rename(ProgramName = Program.Name)
+finData <- finData %>% rename(CostComparisonToGrinnell = Cost.Comparison.to.Grinnell..see.Key.tab.)
+finData <- finData %>% rename(FinAidAvailable = Estimated.OCS.Grant.for.Need.Based.Aid.Recipients..per.semester.)
+finData <- subset(finData, select = -c(X))
+finData <- finData[-c(91:94), ]
+
+finData <- finData %>%
+  group_by(ProgramName) %>%
+  filter(!(duplicated(ProgramName) & Term == "Academic Year")) %>%
+  ungroup()
+
+```
+
+
+```{r}
+get_cost_value <- function(value) {
+  if (value == 1) {
+    return("Less expensive")
+  } else if (value == 2) {
+    return("Equal cost")
+  } else if (value == 3) {
+    return("Likely $0-$1250 more")
+  } else if (value == 4) {
+    return("Likely $1250-$2500 more")
+  } else if (value == 5) {
+    return("Likely $2500 more")
+  } else {
+    return("Unknown")  # Handle any unexpected values
+  }
+}
+finData$CostValueComparison <- sapply(finData$CostComparisonToGrinnell, get_cost_value)
+```
+
+```{r}
+
+# Define UI
+ui <- fluidPage(
+  titlePanel("Cost Comparison between a semester at Grinnell vs. Study Abroad Programs"),
+    mainPanel(
+      plotlyOutput("costComparisonPlot")
+    )
+)
+
+# Define server logic
+server <- function(input, output) {
+  
+  # Specify the desired order of CostValueComparison levels
+  desired_order <- c("Less expensive", "Equal cost", "Likely $0-$1250 more", "Likely $1250-$2500 more", "Likely $2500 more")
+  
+  # Convert CostValueComparison to factor with specified levels and order
+  finData$CostValueComparison <- factor(finData$CostValueComparison, levels = desired_order)
+  
+  # Filter data and aggregate by CostValueComparison and ProgramName
+  filtered_data <- finData %>%
+    filter(!is.na(CostValueComparison) & !is.na(ProgramName)) %>%
+    group_by(CostValueComparison, ProgramName, FinAidAvailable) %>%
+    summarise(count = n()) %>%
+    ungroup()
+  
+  # Define a color palette (adjust as needed)
+  program_colors <- scales::hue_pal()(length(unique(filtered_data$ProgramName)))
+  
+  # Create the plotly plot with custom colors and tooltip
+  output$costComparisonPlot <- renderPlotly({
+    p <- ggplot(filtered_data, aes(x = CostValueComparison, y = count, fill = ProgramName,
+                                   text = paste("Program Name: ", ProgramName, "\n",
+                                                "Need-based Aid (if eligible): ", FinAidAvailable))) +
+      geom_bar(stat = "identity") +
+      scale_fill_manual(values = program_colors) +  # Assign custom colors based on ProgramName
+      labs(x = "Difference between Grinnell and Study Abroad Program", y = "No. of Study Abroad Programs") +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1),
+            legend.position = "none")  # Hide legend
+      
+    ggplotly(p, tooltip = "text", dynamicTicks = TRUE)
+  })
+}
+
+# Run the application
+shinyApp(ui = ui, server = server)
+```
+
