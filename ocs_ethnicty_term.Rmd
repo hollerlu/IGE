@@ -1,0 +1,133 @@
+---
+title: "ocs_ethnicity"
+author: "Caitlin Abreu"
+date: "2024-04-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# libraries
+library(magrittr)
+library(tidyverse)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(shiny)
+library(shinydashboard)
+library(plotly)
+library(lubridate)
+```
+
+```{r}
+ocs <- read.csv("~/Desktop/324/Updated OCS Data 3-7.csv")
+```
+
+```{r}
+# subset program year and term
+ocs_term2 <- subset(ocs, select = c(AcademicYear,ProgramTerm))
+# calculate student totals according to year/term criteria
+ocs_term2_summary <- ocs_term2 %>%
+  group_by(AcademicYear,ProgramTerm) %>%
+  summarise(total_students = n(), .groups = "drop")
+head(ocs_term2_summary)
+```
+
+
+```{r}
+# UI
+ui <- dashboardPage(
+  skin = "black",
+  # title
+  dashboardHeader(title = "OCS/IGE"),
+  
+  # side bar options
+  dashboardSidebar(
+    sidebarMenu(
+      menuItem("Ethnicity Vis", tabName = "ethnicity"),
+      menuItem("Term Vis", tabName = "term")
+    )
+  ),
+  
+  # body
+  dashboardBody(
+    tabItems(
+      tabItem(tabName = "ethnicity",
+              h2("Ethnicity Per Region"),
+              # first playlist vis
+              fluidRow(
+                box(
+                  # select first attribute and playlist
+                  checkboxGroupInput("region", "Select Region(s):",
+                         choices = unique(ocs$ProgramRegion),
+                         selected = unique(ocs$ProgramRegion[ocs$ProgramRegion != "Europe"])))
+              ),
+              fluidRow(
+                box(
+                  plotlyOutput("plot_ethnicity"))
+              )),
+      
+      tabItem(tabName = "term",
+              h2("Term Abroad Per Year"),
+              fluidRow(
+                # box(
+                #   # select one attribute and two playlists (can be the same)
+                #   selectInput("distribution_plot_select",
+                #               label = "Select an attribute:",
+                #               choices = placement_cols)),
+                box(
+                  plotlyOutput("plot_term"))
+              ))
+    )
+  )
+)
+
+
+# SERVER
+server <- function(input, output) {
+
+  # scatter plot 1
+  output$plot_ethnicity <- renderPlotly({
+    ocs_filter <- ocs %>%
+      filter(ProgramRegion %in% input$region)
+    
+    plot_ly(ocs_filter,
+            x = ~CountryName, 
+            color = ~Ethnicity,
+            type = "histogram") %>%
+    layout(barmode = "stack",
+           xaxis = list(title = "Country Name"),
+           yaxis = list(title = "Number of Students Abroad"))
+      
+      # labs(x = "Country Name", y = "Number of Students", fill = "Ethnicity") +
+      # theme(legend.position = "bottom")
+      # 
+  })
+  
+  
+  # histogram
+  output$plot_term <- renderPlotly({
+    
+    plot_ly(ocs_term2_summary, 
+        x = ~AcademicYear, 
+        y = ~total_students, 
+        color = ~ProgramTerm, 
+        type = "bar",
+        text = ~ProgramTerm,
+        hoverinfo = "text",
+        hovertext = paste("Number of students abroad over", ocs_term2_summary$ProgramTerm,
+                          ": ", ocs_term2_summary$total_students)) %>%
+  layout(barmode = "stack",
+         xaxis = list(title = "Academic Year",
+                      tickvals = ocs_term2_summary$AcademicYear,
+                      ticktext = ocs_term2_summary$AcademicYear),
+         yaxis = list(title = "Total Students Abroad Each Year"))
+  })
+  
+}
+
+shinyApp(ui, server)
+```
