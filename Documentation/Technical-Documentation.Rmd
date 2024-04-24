@@ -1,0 +1,389 @@
+---
+title: "IGE and Off-Campus Study: An RShiny App"
+subtitle: "CSC-324-02 Technical Documentation"
+author: "Natalia Ramirez Jimenez, Ishita Sarraf, Caitlin Abreu, Dylan Hong, and Lucas Holler"
+date: "2024-05-08"
+output:
+  pdf_document
+---
+
+\newpage
+
+# Table of contents
+
+1. User Stories \newline
+2. Reproducibility \newline
+3. Architectural Design \newline
+4. Design Decisions \newline
+5. Project Diagrams \newline
+6. Design Patterns \newline 
+7. Coding Standards \newline
+8. References 
+
+\newpage
+
+# User Stories
+
+## As a user, I can easily use the UI to view desired visualizations.
+
+There are six tabs which lead to each of the different visualizations.
+
+The user can change tabs as they please without causing any visual bugs.
+
+## As a user, I can use a cluster map to see how many students went where and to what program.
+
+The map renders the number of visits and locations correctly.
+
+The user can scroll and zoom in and out on the map.
+
+The clusters expand to individual city markers.
+
+The markers have pop-ups that show the visit count and links to the programs.
+
+## As a user, I can use a stacked bar chart to see the ethnicities of students going to different countries
+
+The bars accurately show the proportions of ethnicities per country in different colors.
+
+The user can filter the chart by region.
+
+The user can hover over the segments to see the ethnicity.
+
+## As a user, I can use a stacked bar chart to compare the costs of different programs compared to Grinnell.
+
+The bars accurately show the different programs in each level of cost.
+
+Hovering over the bars shows the program and its need-based aid.
+
+## As a user, I can use a stacked bar chart to see how many students have travelled abroad each semester.
+
+The bars accurately show the student counts per semester.
+
+## As a user, I can use a line chart to see the number of students travelling to each region overtime.
+
+The lines accurately show the student counts to region each year.
+
+The user can use the sidebar to include and exclude region lines.
+
+## As a user, I can use a stacked bar chart to see the gender proportions of the students visiting each country.
+
+The bars accurately show the gender proportions for the different countries.
+
+\newpage
+
+# Reproducibility
+
+First, the original CSV file of the trip information (provided by IGE) is read from the github. The column names are then changed for convenience:
+
+```{r, eval=FALSE}
+colnames(dataFile) <- c("ApplicationCycle", "Ethnicity", "AnticipatedCompletionDate",
+                        "ProgramName", "CountryName", "ProgramCity", "ProgramRegion",
+                        "ApplicationID", "ProgramYear", "ProgramTerm", 
+                        "ApplicationStatusAlias", "Gender", "PreferredGender")
+```
+
+Next, changed certain values in the dataset. For ethnicity, "Non-resident alien" was replaced with "International student" at IGE's request to be more inclusive. A couple bugs were fixed for the Grinnell in London Program, like the program name being misspelled and removing duplicate entries.
+
+```{r, eval=FALSE}
+dataFile$Ethnicity <- ifelse(dataFile$Ethnicity == "Non-resident alien", 
+                             "International student", dataFile$Ethnicity)
+
+dataFile$ProgramName <- ifelse(dataFile$ProgramName == 
+                                 "*<B>Grinnell-in-London</B>",
+                               "Grinnell in London", dataFile$ProgramName)
+
+dataFile <- dataFile[dataFile$ProgramCity != "undefined", ]
+```
+
+Region names for countries were then manually changed to match IEE classification.
+
+```{r, eval=FALSE}
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == 
+                                   "Latin America", 
+                                 "Latin America and Caribbean", 
+                                 dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == 
+                                   "South America", 
+                                 "Latin America and Caribbean",
+                                 dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == 
+                                   "Caribbean", 
+                                 "Latin America and Caribbean", 
+                                 dataFile$ProgramRegion)
+
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == 
+                                   "Middle East", "MENA",
+                                 dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion ==
+                                   "Southeast Asia", "Asia",
+                                 dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == 
+                                   "South Asia", "Asia", 
+                                 dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == 
+                                   "East Asia", "Asia", 
+                                 dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$ProgramRegion == 
+                                   "Central Asia", "Asia",
+                                 dataFile$ProgramRegion)
+
+
+dataFile$ProgramRegion <- ifelse(dataFile$CountryName == 
+                                   "Tunisia", "MENA", 
+                                 dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$CountryName ==
+                                   "Cameroon", 
+                                 "Sub-Saharan Africa",
+                                 dataFile$ProgramRegion)
+
+dataFile$ProgramRegion <- ifelse(dataFile$CountryName == 
+                                   "Kenya", "Sub-Saharan Africa", 
+                                 dataFile$ProgramRegion)
+```
+
+Then, we added two extra columns for academic year, since the programs were listed as calendar year. One column has the academic year in string format, and the other column has the first year of that string in numeric format.
+
+```{r, eval=FALSE}
+assign_year <- function(app_cycle) {
+  if (app_cycle == "Academic Year 2016" || app_cycle == 
+      "Fall 2016" || app_cycle == "Spring 2017") {
+    return("2016-2017")
+  } 
+  
+  else if (app_cycle == "Academic Year 2017" || app_cycle == 
+           "Fall 2017" || app_cycle == "Spring 2018") {
+    return("2017-2018")
+  } 
+  
+  else if (app_cycle == "Academic Year 2018" || app_cycle == 
+           "Fall 2018" || app_cycle == "Spring 2019") {
+    return("2018-2019")
+  } 
+  
+  else if (app_cycle == "Academic Year 2019" || app_cycle == 
+           "Fall 2019" || app_cycle == "Spring 2020") {
+    return("2019-2020")
+  } 
+  
+  else if (app_cycle == "Academic Year 2020" || app_cycle == 
+           "Fall 2020" || app_cycle == "Spring 2021") {
+    return("2020-2021")
+  } 
+  
+  else if (app_cycle == "Academic Year 2021" || app_cycle == 
+           "Fall 2021" || app_cycle == "Spring 2022") {
+    return("2021-2022")
+  } 
+  
+  else if (app_cycle == "Academic Year 2022" || app_cycle == 
+           "Fall 2022" || app_cycle == "Spring 2023") {
+    return("2022-2023")
+  } 
+  
+  else if (app_cycle == "Academic Year 2023" || app_cycle == 
+           "Fall 2023" || app_cycle == "Spring 2024") {
+    return("2023-2024")
+  } else {
+    return("NA")
+  }
+}
+
+for (i in 1:nrow(dataFile)) {
+  dataFile$AcademicYear[i] <- 
+    assign_year(dataFile$ApplicationCycle[i])
+}
+
+
+
+dataFile$StartYear <- 
+  as.numeric(substr(dataFile$AcademicYear, 1, 4))
+```
+
+Finally, the cleaned data file is written to the local repository to be uploaded to the github.
+
+```{r, eval=FALSE}
+write.csv(dataFile, file = "Updated OCS Data 3-7.csv", row.names = TRUE)
+```
+
+\newpage
+
+# Architectural Design (Add this later, diagram of architecture style, unless already in UML)
+
+\newpage
+
+# Design Decisions
+
+## Tabs UI
+
+## Cluster Map
+
+## Ethnicity Bar Chart
+
+## Financial Bar Chart
+
+## Students Abroad each Semester Bar Chart
+
+## Students Abroad in each Region Line Chart
+
+## Gender Bar Chart
+
+\newpage
+
+# Project Diagrams and UML Diagrams (Do this later) (Activity, Use Case, and Deployment (files))
+
+\newpage
+
+# Design Patterns
+
+## Dynamic Queries
+
+"Display environment: A display with symbols representing entities drawn from a set of multidimensional discrete data, with a set of controls that restricts the range displayed on each of the data dimensions."
+
+We draw the city locations of all the rows in the dataset to display the off-campus programs
+being offered at that specific city. The multidimensional space is a map visualization with a
+slider input where the user can filter out data points by region and year range.
+
+## Drill Down
+
+"Here a user clicks on a symbol or visualization to get more information about the visualization."
+
+We create a financial information bar chart where the user can hover over a bar chart (x-axis:
+Difference in cost of doing Off-Campus Study vs. Semester in Grinnell, y-axis: Number of
+Programs) to get extra information that shows program name and need-based aid available when
+you hover your mouse on it.
+
+## Model-Based interactive Planning for System Design: Display Environment
+
+"Model output is displayed as time series plots, or possibly a map with a time slider. A set
+of sliders or input boxes allow user to change model parameters."
+
+We present a map visualization which lets the user select programs based on academic year.
+Thus, the programs that will show up on the map will have at least one student who attended in a
+date range. For instance, all the active programs from 2020-2021 (Covid year).
+
+## Seed then Grow:
+
+"Often a data analyst starts with a particular seed of information
+and then begins to gather related information. Each additional information nugget may
+lead to further expansion of an information tree or network. This has been called "Start
+with what you know, then grow"
+
+Our map visualization first displays cities where programs are located. As users continue
+to click on the city markers, more programs/program info is displayed in detail.
+
+## Presentation linking Images and Words
+
+“A verbal sequence expressing ideas and concepts and reasons for believing them. An image sequence expressing both spatial and non spatial patterns. A sequence of links between visual and verbal materials consisting of deictic gestures, semantic commonalities, and temporal proximities.”
+
+For both our presentations to the community partner and to the class we utilize slides
+that first introduce our used design patterns, then we show the image of the
+visualization created with those patterns, and finally a connection between the theory and
+practice.
+
+## Visual Query
+
+"Solving problem components by identifying patterns through a
+visual search."
+
+For our map visualization, the user may be curious about how many and what programs are in
+each country, and the cluster map allows the user to look at different countries to find this
+information.
+
+\newpage
+
+# Code Standards 
+
+## Formatting 
+
+Ensure everything is properly and consistently indented (CTRL + I) 
+
+-Intent: To ensure easy readability  
+
+Keep each line less than 80 characters 
+
+-Intent: Maintain readability and efficiency 
+
+-Example: If there are super long lines of code, people will have to scroll. 
+
+No redundant code 
+
+-Intent: Keep code clean and concise 
+
+-Example: Do not read data file more than once. 
+
+General comments should be identified with # followed by a space 
+
+-Intent: To understand what complicated code is doing  
+
+-Example: # filter data frame by country 
+
+Inline comments need 2 spaces before the # 
+
+-Intent: Maintain structure and normal style 
+
+-Example: “printf()#This prints" vs. "printf()  #This prints"
+
+Variable names and file names should have the format: dataFile
+
+-Intent: Maintain code context and readability
+
+-Example: variableName 
+
+Use meaningful and descriptive variable names 
+
+-Intent: Ensuring readability and clearness 
+
+-Example: dataCity <- read.csv(city_data.csv) 
+
+For variable assignments, use <– not = 
+
+All libraries in same code block, not dispersed throughout the code 
+
+-Intent: Make libraries apparent and don’t repeat lines 
+
+-Unique block code for reading data files 
+
+-Intent: Easily accessible data for editing 
+
+-Example:  
+dataFile <- read.csv("df.csv") 
+dataFile$ProgramCity <- gsub(",.*", "", dataFile$ProgramCity) 
+
+## Documentation 
+
+Explain the use of code that produce a general functionality in the project 
+
+-Intent: To make the code easy to understand for functions 
+
+-Example: A comment that says that a function is making a side bar layout  
+
+Don’t repeat explanations for similar lines of code, but always make clear what lines of code are for/what they’re doing 
+
+-Intent: Prevent redundant comments 
+
+-Example: If you use the same filtering methods multiple times, don’t re-explain the methods, but explain what you’re filtering for each time. 
+
+\newpage
+
+# References 
+
+[1] C. Beeley, Web Application Development with R Using Shiny, 2nd ed. Birmingham, UK: Packt Publishing, 2016.
+
+[2] T. Munzer, Visualization Analysis & Design, New York, NY, USA: CRC Press, 2015.
+
+[3] J. Cheng, B. Schloerke, B. Karambelkar, and Y. Xie. "Add markers to leaflet." Rstudio.github.io. Accessed: April 17, 2024. [Online.] Available: https://rstudio.github.io/leaflet/articles/markers.html
+
+[4] Natural Earth, 2009-2024, “Admin 0- Countries,” Source. [Online]. Available: https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-admin-0-countries-2/ 
+
+[5] J. F. Dooley, Software Development, Design and Coding, 2nd ed. New York, NY, USA: Apress, 2017. 
+
+[6] F. M. Fowler, Navigating Hybrid Scrum Environments, New York, NY, USA: Apress, 2019.
+
+[7] S. Sundaramoorthy, UML Diagramming, 1st ed. Boca Raton, FL, USA: CRC Press, 2022.
