@@ -32,13 +32,13 @@ The user can change tabs as they please without causing any visual bugs.
 
 ## As a user, I can use a cluster map to see how many students went where and to what program.
 
-The map renders the number of visits and locations correctly.
+The map renders the number of visits and locations of off-campus programs correctly.
 
-The user can scroll and zoom in and out on the map.
+The user can explore the map and cities by zooming in and out on the map. 
 
-The clusters expand to individual city markers.
+The clusters display the number of cities that are close geographically, and they expand to individual city markers.
 
-The markers have pop-ups that show the visit count and links to the programs.
+The markers have pop-ups that show the visit count and links to active off-campus programs.
 
 ## As a user, I can use a stacked bar chart to see the ethnicities of students going to different countries
 
@@ -223,6 +223,9 @@ write.csv(dataFile, file = "Updated OCS Data 3-7.csv", row.names = TRUE)
 ## Tabs UI
 
 ## Cluster Map
+What: A world map displaying all off-campus programs in the form of clusters. The clusters contain markers that are geometrically (spatially) close, when a user clicks on a cluster the map will zoom in into its position and display the individual city markers. The clusters are ordered and quantitative, they display the number of markers contained. 
+Why: The user can look up the desired city by continuously clicking on a cluster, it helps identifying the programs in a region. This incentives user interaction with the visualization. 
+How: We encoded the spatial attributes of the data into single markers that point to a specific city. The clusters are created based on the location of this markers, and the hue of the clusters will depend on how many markers are in one region. The hues vary from green to yellow, where yellow indicates a larger density of markers. The clusters are shown as a circular shape.
 
 ## Ethnicity Bar Chart
 
@@ -248,7 +251,7 @@ write.csv(dataFile, file = "Updated OCS Data 3-7.csv", row.names = TRUE)
 
 We draw the city locations of all the rows in the dataset to display the off-campus programs
 being offered at that specific city. The multidimensional space is a map visualization with a
-slider input where the user can filter out data points by region and year range.
+slider input where the user can filter out data points by region.
 
 ## Drill Down
 
