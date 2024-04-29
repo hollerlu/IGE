@@ -38,9 +38,11 @@ The `third` is a data set of active programs and their cost comparison to Grinne
 The `goal` was to `visualize the first and second data sets overall as well as different features of the different data sets`. \newline
 We came up with seven visualizations: a map of where students study and on what programs, a line chart of what regions students study in over time, a bar chart of how many students study abroad each semester, a bar chart of the number of students of different ethnicities that have studied abroad in each region, a bar chart of the gender of students that have studied in each country, and a bar chart of the different programs and their cost compared to Grinnell.
 
+\newpage
+
 # Stakeholder Map
 
-![Stakeholder Map](/Users/ishi/Downloads/Stakeholder-image.png)
+![Stakeholder Map](StakeholderMap.jpg)
 \newline
 Notes:
 
@@ -136,6 +138,7 @@ The programs need to show available need-based aid.
 
 [3] J. Cheng, B. Schloerke, B. Karambelkar, and Y. Xie. "Add markers to leaflet." Rstudio.github.io. Accessed: April 17, 2024. [Online.] Available: https://rstudio.github.io/leaflet/articles/markers.html
  
+\newpage
 
 # Appendix 
 
