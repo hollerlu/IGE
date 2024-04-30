@@ -204,7 +204,7 @@ server <- function(input, output, session) {
     req(input$selectedRegion)
     
     regionFilteredData <- dataFile %>%
-      filter(ProgramRegion == input$selectedRegion) %>%
+      filter(ProgramRegion %in% input$selectedRegion) %>%
       filter(ProgramName %in% activePrograms$Program.Name) %>%
       group_by(ProgramCity) %>%
       mutate(TripCount = 0) 
@@ -228,8 +228,9 @@ server <- function(input, output, session) {
     # how many visits it's had, and links to its active programs.
     popupText <- lapply(seq(nrow(cityData())), function(i) {
       city <- cityData()$ProgramCity[i]
-      unique_programs <- unique(dataFile$ProgramName[dataFile$ProgramCity == city & dataFile$ProgramRegion == input$selectedRegion])
-      program_links <- paste("<a href='", activePrograms$TD.link[activePrograms$Program.Name %in% unique_programs], "'>", unique_programs, "</a>", collapse = "<br/>")
+      unique_programs <- unique(dataFile$ProgramName[dataFile$ProgramCity == city & dataFile$ProgramRegion %in% input$selectedRegion])
+      active_unique_programs <- unique_programs[unique_programs %in% activePrograms$Program.Name]
+      program_links <- paste("<a href='", activePrograms$TD.link[activePrograms$Program.Name %in% unique_programs], "'>", active_unique_programs, "</a>", collapse = "<br/>")
       paste(
         "City: ", city, "<br/>",
         "Visits: ", cityData()$TripCount[cityData()$ProgramCity == city], "<br/>",
@@ -396,59 +397,3 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server, options = list(width = 1000, height = 6000))
-
-# # reading in the country information
-#   cityMap <- read.csv("https://raw.githubusercontent.com/naramirezj/Off_Campus_Study_R/main/worldcities.csv")
-#   activePrograms <- read.csv("https://raw.githubusercontent.com/hollerlu/IGE/main/OCS%2024-25%20Active%20Programs.csv", header = TRUE, stringsAsFactors = FALSE)
-#   cityData <- dataFile %>%
-#     filter(ProgramName %in% activePrograms$Program.Name) %>%
-#     group_by(ProgramCity) %>%
-#     mutate(TripCount = 0) 
-#   
-#   cityData <- merge(cityData, cityMap[, c("city", "country", "lat", "lng")], 
-#                     by.x = c("ProgramCity", "CountryName"), 
-#                     by.y = c("city", "country"), all.x = TRUE)  
-#   
-#   cityDataGrouped <- cityData %>%
-#     group_by(ProgramCity) %>%
-#     summarise(lat = first(lat),
-#               lng = first(lng),
-#               TripCount = n_distinct(ApplicationID))
-#   na_cities <- cityData %>%
-#     filter(is.na(lat) | is.na(lng)) %>%
-#     select(ProgramCity, CountryName) %>%
-#     distinct()
-#   
-#   # View the list of cities with NA coordinates
-#   print(na_cities)
-#   #map
-#   # Creating the map
-#   output$map <- renderLeaflet({
-#     
-#     # When a city is clicked on, makes a popup box that shows its name,
-#     # how many visits it's had, and links to its active programs.
-#     popupText <- lapply(seq(nrow(cityDataGrouped)), function(i) {
-#       city <- cityDataGrouped$ProgramCity[i]
-#       unique_programs <- unique(cityData$ProgramName[cityData$ProgramCity == city])
-#       program_links <- paste("<a href='", activePrograms$TD.link[activePrograms$Program.Name %in% unique_programs], "'>", unique_programs, "</a>", collapse = "<br/>")
-#       paste(
-#         "City: ", city, "<br/>",
-#         "Visits: ", cityDataGrouped$TripCount[cityDataGrouped$ProgramCity == city], "<br/>",
-#         "Programs: ", paste(program_links, collapse = "<br/>"),
-#         sep = ""
-#       )
-#     }) %>% 
-#       lapply(htmltools::HTML)
-#     
-#     leaflet(options = leafletOptions(minZoom = 2)) %>%
-#       addProviderTiles("CartoDB.Voyager") %>%
-#       setView(lng = 0, lat = 20, zoom = 2) %>%
-#       # Sets the limits of scrolling
-#       setMaxBounds(lng1 = -180, lat1 = -90, lng2 = 180, lat2 = 90) %>%
-#       addMarkers(data = cityDataGrouped, 
-#                  lng = ~lng, 
-#                  lat = ~lat, 
-#                  popup = ~popupText,
-#                  clusterOptions = markerClusterOptions())
-#   })
-#   
