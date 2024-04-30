@@ -267,6 +267,13 @@ Why: The line chart is to `present` (`analyze`) the different number of students
 How: The line chart uses the `line` mark with the `length` and `color` channels. The lines are of different lengths based on the number of students for each year for that region and are colored with different colors for the different regions. 
 
 ## Gender Bar Chart
+What: The gender bar chart displays proportions/frequencies of male and female students who have participated in the study abroad program, segmented by gender. Each bar is segmented by gender, and users can filter the data by region or by gender. Additionally, users can hover over the bars to see the count of students of the selected gender.
+
+Why: The gender bar chart is used to 'compare' ('query') the frequencies/proportions of male and female students who have visited select regions/countries through the study abroad program. This visualization can help prospective students decide which country they might want to visit, providing insights into gender distribution in various study abroad destinations.
+
+How: The bar chart employs filtering to reduce the number of regions shown, preventing information overload for the user. It uses the line mark with 'vertical spatial position' channel to display the varying proportions of genders, 'horizontal spatial position' to distinguish between countries, and 'hue' to differentiate between genders. This setup allows users to easily visualize and compare the gender makeup of students in different study abroad programs.
+
+
 
 \newpage
 
