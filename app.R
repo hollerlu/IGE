@@ -211,7 +211,13 @@ server <- function(input, output, session) {
     
     cityData_merge <- merge(regionFilteredData, cityMap[, c("city_ascii", "country", "lat", "lng")], 
                             by.x = c("ProgramCity", "CountryName"), 
-                            by.y = c("city_ascii", "country"), all.x = TRUE)  
+                            by.y = c("city_ascii", "country"), all.x = TRUE) 
+    
+    cityData_merge <- cityData_merge %>%
+      mutate(lat = ifelse(ProgramCity == "Washington" & CountryName == "United States", 38.9072, lat),
+             lng = ifelse(ProgramCity == "Washington" & CountryName == "United States", -77.0369, lng)) %>%
+      mutate(lat = ifelse(ProgramCity == "Seoul", 37.55, lat),
+             lng = ifelse(ProgramCity == "Seoul", 126.99, lng))
     
     cityDataGrouped <- cityData_merge %>%
       group_by(ProgramCity) %>%
