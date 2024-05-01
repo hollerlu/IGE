@@ -121,15 +121,16 @@ ui <- dashboardPage(
     )
   ),
   
-  # body
+  # UI Body
   dashboardBody(
     tabItems(
-      # map tab
+      # Map tab
       tabItem(
         tabName = "map",
         h2("Off-Campus Programs Map"),
         column(width = 12,
                leafletOutput("map")),
+        # Region selection for map
         checkboxGroupInput("selectedRegion", "Choose Region:", choices = unique(dataFile$ProgramRegion), selected=unique(dataFile$ProgramRegion))),
       # ethnicity bar chart tab
       tabItem(
@@ -198,27 +199,26 @@ ui <- dashboardPage(
 # SERVER
 server <- function(input, output, session) {
   # MAP
-  # Reading in the country information
-  
   cityData <- reactive({
+    # Requires Region selection
     req(input$selectedRegion)
-    
+    # Filtering data by region and active programs
     regionFilteredData <- dataFile %>%
       filter(ProgramRegion %in% input$selectedRegion) %>%
       filter(ProgramName %in% activePrograms$Program.Name) %>%
       group_by(ProgramCity) %>%
       mutate(TripCount = 0) 
-    
+    # Merging filtered data with Cities coordinates dataframe
     cityData_merge <- merge(regionFilteredData, cityMap[, c("city_ascii", "country", "lat", "lng")], 
                             by.x = c("ProgramCity", "CountryName"), 
                             by.y = c("city_ascii", "country"), all.x = TRUE) 
-    
+    # Setting coordinates for two cities manually
     cityData_merge <- cityData_merge %>%
       mutate(lat = ifelse(ProgramCity == "Washington" & CountryName == "United States", 38.9072, lat),
              lng = ifelse(ProgramCity == "Washington" & CountryName == "United States", -77.0369, lng)) %>%
       mutate(lat = ifelse(ProgramCity == "Seoul", 37.55, lat),
              lng = ifelse(ProgramCity == "Seoul", 126.99, lng))
-    
+    # Gathering information for pop-ups
     cityDataGrouped <- cityData_merge %>%
       group_by(ProgramCity) %>%
       summarise(lat = first(lat),
@@ -227,11 +227,9 @@ server <- function(input, output, session) {
     return(cityDataGrouped)
   })
   
-  #map
   # Creating the map
   output$map <- renderLeaflet({
-    # When a city is clicked on, makes a popup box that shows its name,
-    # how many visits it's had, and links to its active programs.
+    # When a city is clicked on a pop-up is created
     popupText <- lapply(seq(nrow(cityData())), function(i) {
       city <- cityData()$ProgramCity[i]
       unique_programs <- unique(dataFile$ProgramName[dataFile$ProgramCity == city & dataFile$ProgramRegion %in% input$selectedRegion])
@@ -245,7 +243,7 @@ server <- function(input, output, session) {
       )
     }) %>% 
       lapply(htmltools::HTML)
-    
+    # Setting map limits, colors, and clusters
     leaflet(options = leafletOptions(minZoom = 2)) %>%
       addProviderTiles("CartoDB.Voyager") %>%
       setView(lng = 0, lat = 20, zoom = 2) %>%
