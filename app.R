@@ -59,14 +59,15 @@ d <- dataFile %>%
 
 # create dataframe for gender visualization
 data_aggregated <- dataFile %>%
-  group_by(ProgramRegion, Gender) %>%
-  summarise(Count = n(), .groups = "drop") %>%
+  group_by(CountryName, Gender, ProgramRegion) %>%
+  summarise(GenderCount = n(), .groups = "drop") %>%
+  select(ProgramRegion, CountryName, Gender, GenderCount) %>%
   ungroup()
 
 # calculate top countries by total student count
 top_countries <- data_aggregated %>%
   group_by(ProgramRegion) %>%
-  summarise(Total = sum(Count), .groups = "drop") %>%
+  summarise(Total = sum(GenderCount), .groups = "drop") %>%
   arrange(desc(Total)) %>%
   slice_head(n = 5) %>%
   pull(ProgramRegion)
@@ -171,7 +172,7 @@ ui <- dashboardPage(
                   plotOutput("lineplot")))),
       # gender visualizations
       tabItem(tabName = "gender",
-              h2("Gender Distribution"),
+              h2("Relative Gender Distribution by Region"),
               h4("Until recently, Grinnell College collected gender-related information using binary criteria. Based on that data, we see that, similar to the U.S. national trends, female-identifying students tend to be over-represented among our off-campus study participants."),
               fluidRow(
                 box(
@@ -354,14 +355,33 @@ server <- function(input, output, session) {
     df1 <- data_aggregated %>%
       filter(ProgramRegion %in% input$countryInput) %>%
       group_by(ProgramRegion) %>%
-      mutate(Percentage = Count / sum(Count) * 100)
+      mutate(Percentage = GenderCount / sum(GenderCount) * 100)
     
-    p <- ggplot(df1, aes(x = ProgramRegion, y = Percentage, fill = Gender)) +
+    p <- ggplot(df1, aes(x = CountryName, y = Percentage, fill = Gender)) +
       geom_bar(stat = "identity", position = "fill") +
+      # scale_x_discrete(guide = guide_axis(check.overlap = TRUE)) +
       scale_fill_manual(values = c("F" = "#AD62AA", "M" = "#659DBD")) +
-      labs(title = "Relative Gender Distribution by Region", x = "Region", y = "Percentage")
+      labs(title = "Relative Gender Distribution by Region", x = "Region", y = "Percentage") +
+      theme(axis.text.x = element_text(angle = 90))
+
+    ggplotly(p)
     
-    ggplotly(p) 
+    # stacked bar chart
+    # plot_ly(df1, 
+    #         x = ~CountryName, 
+    #         y = ~Percentage, 
+    #         color = ~Gender, 
+    #         type = "bar",
+    #         text = ~Percentage,
+    #         hoverinfo = "text",
+    #         hovertext = paste(
+    #           "Country:", df1$CountryName,
+    #           "Number of", df1$Gender,
+    #           ": ", df1$GenderCount, "<br>",
+    #             "Proportion", df1$Percentage)) %>%
+    #   layout(barmode = "stack",
+    #          xaxis = list(title = "Region"),
+    #          yaxis = list(title = "Percentage"))
   })
   
   # # render bubble chart
