@@ -128,6 +128,7 @@ ui <- dashboardPage(
       tabItem(
         tabName = "map",
         h2("Off-Campus Programs Map"),
+        h4("Grinnell’s Off-Campus Study featured programs portfolio contains more than 100 programs in over 40 countries across the globe. Explore this map for a snapshot of programs and opportunities in different locations."),
         column(width = 12,
                leafletOutput("map")),
         # Region selection for map
@@ -136,6 +137,7 @@ ui <- dashboardPage(
       tabItem(
         tabName = "ethnicity",
         h2("Ethnicity Per Region"),
+        h4("Grinnellians from various ethnic and racial backgrounds study off-campus as a part of their educational journeys. The proportion of Grinnellians from underrepresented backgrounds who have studied off campus is close to par with ethnic/racial representation among the student body."),
         fluidRow(
           box(
             # select region
@@ -149,12 +151,14 @@ ui <- dashboardPage(
       # students abroad per term bar chart
       tabItem(tabName = "term",
               h2("Term Abroad Per Year"),
+              h4("Most OCS programs are offered during both the fall and spring semesters, giving students the opportunity to study off campus during the term that works best with their 4-year plans and extracurricular activities."),
               fluidRow(
                 box(
                   plotlyOutput("plot_term")))),
       # trip count line chart
       tabItem(tabName = "linechart",
               h2("Trip Count per Year"),
+              h4("Similar to the U.S. national trends, Grinnellians who study off campus disproportionately choose Western European locations for their experiences. When Grinnellians are starting to think about off-campus study opportunities, OCS staff encourage them to think broadly about their academic, pre-professional, personal, and language goals and explore the many high-quality programs that are situated within beautiful cultures and landscapes in less-traditional locations."),
               fluidRow(
                 box(
                   # select region
@@ -168,6 +172,7 @@ ui <- dashboardPage(
       # gender visualizations
       tabItem(tabName = "gender",
               h2("Gender Distribution"),
+              h4("Until recently, Grinnell College collected gender-related information using binary criteria. Based on that data, we see that, similar to the U.S. national trends, female-identifying students tend to be over-represented among our off-campus study participants."),
               fluidRow(
                 box(
                   # select region
@@ -191,6 +196,7 @@ ui <- dashboardPage(
       # finance visualization
       tabItem(tabName = "finance",
               h2("Cost Comparison between a semester at Grinnell vs. Study Abroad Programs"),
+              h4("Grinnell strives to make it financially feasible for all Grinnellians to study off campus. The data in this graph comes from one of the many financial aid tools and resources available to help students make informed decisions. The relative cost of attendance of each program can be compared to a semester at Grinnell. An array of scholarships are available to support participation."),
               fluidRow(
                 box(
                   plotlyOutput("costComparisonPlot"))
