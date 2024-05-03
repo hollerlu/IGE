@@ -59,17 +59,17 @@ d <- dataFile %>%
 
 # create dataframe for gender visualization
 data_aggregated <- dataFile %>%
-  group_by(CountryName, Gender) %>%
+  group_by(ProgramRegion, Gender) %>%
   summarise(Count = n(), .groups = "drop") %>%
   ungroup()
 
 # calculate top countries by total student count
 top_countries <- data_aggregated %>%
-  group_by(CountryName) %>%
+  group_by(ProgramRegion) %>%
   summarise(Total = sum(Count), .groups = "drop") %>%
   arrange(desc(Total)) %>%
   slice_head(n = 5) %>%
-  pull(CountryName)
+  pull(ProgramRegion)
 
 # data cleaning for financial visualization
 finData <- finData %>% rename(ProgramName = Program.Name)
@@ -170,20 +170,24 @@ ui <- dashboardPage(
               h2("Gender Distribution"),
               fluidRow(
                 box(
-                  # select country
-                  selectInput("countryInput", "Choose a Country:", choices = NULL, multiple = TRUE, selected = NULL))),
+                  # select region
+                  checkboxGroupInput("countryInput", "Select Region(s):",
+                                     choices = unique(dataFile$ProgramRegion),
+                                     # exclude europe as default
+                                     selected = unique(dataFile$ProgramRegion[dataFile$ProgramRegion != "Europe"])))),
               # bar chart vis
-              fluidRow(
-                box(
-                  plotlyOutput("barChart"))),
+              # fluidRow(
+              #   box(
+              #     plotlyOutput("barChart"))),
               # normalized bar chart vis
               fluidRow(
                 box(
-                  plotlyOutput("normalizedBarChart"))),
+                  plotlyOutput("normalizedBarChart")))#,
               # bubble chart vis
-              fluidRow(
-                box(
-                  plotlyOutput("bubbleChart")))),
+              # fluidRow(
+              #   box(
+              #     plotlyOutput("bubbleChart")))
+      ),
       # finance visualization
       tabItem(tabName = "finance",
               h2("Cost Comparison between a semester at Grinnell vs. Study Abroad Programs"),
@@ -316,56 +320,59 @@ server <- function(input, output, session) {
   })
   
   # GENDER VIS
-  observe({
-    updateSelectInput(session, "countryInput", choices = unique(data_aggregated$CountryName), selected = top_countries)
-  })
+  # observe({
+  #   # Update the choices to unique regions instead of countries
+  #   updateSelectInput(session, "countryInput", label = "Choose a Region:", choices = unique(data_aggregated$ProgramRegion), selected = NULL)
+  # })
   
   # render Stacked Bar Chart
-  output$barChart <- renderPlotly({
-    # require input to render plot
-    req(input$countryInput)  
-    df <- data_aggregated %>%
-      filter(CountryName %in% input$countryInput)
-    
-    p <- ggplot(df, aes(x = CountryName, y = Count, fill = Gender)) +
-      geom_bar(stat = "identity", position = "stack") +
-      scale_fill_manual(values = c("F" = "#AD62AA", "M" = "#659DBD")) +
-      labs(title = "Gender Distribution by Country", x = "Country", y = "Number of Students")
-    
-    # make interactive
-    ggplotly(p) 
-  })
+  # output$barChart <- renderPlotly({
+  #   # require input to render plot
+  #   # req(input$countryInput)  
+  #   df1 <- data_aggregated %>%
+  #     # Filter by region instead of country
+  #     filter(ProgramRegion %in% input$countryInput)
+  #   
+  #   p <- ggplot(df1, aes(x = ProgramRegion, y = Count, fill = Gender)) +
+  #     geom_bar(stat = "identity", position = "stack") +
+  #     scale_fill_manual(values = c("F" = "#AD62AA", "M" = "#659DBD")) +
+  #     labs(title = "Gender Distribution by Region", x = "Region", y = "Number of Students")
+  #   
+  #   # make interactive
+  #   ggplotly(p) 
+  # })
   
   # render relative height stacked bar chart
   output$normalizedBarChart <- renderPlotly({
     req(input$countryInput)
-    df <- data_aggregated %>%
-      filter(CountryName %in% input$countryInput) %>%
-      group_by(CountryName) %>%
+    df1 <- data_aggregated %>%
+      filter(ProgramRegion %in% input$countryInput) %>%
+      group_by(ProgramRegion) %>%
       mutate(Percentage = Count / sum(Count) * 100)
     
-    p <- ggplot(df, aes(x = CountryName, y = Percentage, fill = Gender)) +
+    p <- ggplot(df1, aes(x = ProgramRegion, y = Percentage, fill = Gender)) +
       geom_bar(stat = "identity", position = "fill") +
       scale_fill_manual(values = c("F" = "#AD62AA", "M" = "#659DBD")) +
-      labs(title = "Relative Gender Distribution by Country", x = "Country", y = "Percentage")
+      labs(title = "Relative Gender Distribution by Region", x = "Region", y = "Percentage")
     
     ggplotly(p) 
   })
   
-  # render bubble chart
-  output$bubbleChart <- renderPlotly({
-    req(input$countryInput)
-    df <- data_aggregated %>%
-      filter(CountryName %in% input$countryInput)
-    
-    p <- ggplot(df, aes(x = CountryName, y = Gender, size = Count, color = Gender)) +
-      geom_point(alpha = 0.6) +
-      scale_color_manual(values = c("F" = "#AD62AA", "M" = "#659DBD")) +
-      scale_size(range = c(3, 12)) +
-      labs(title = "Bubble Chart of Student Distribution", x = "Country", y = "Gender")
-    
-    ggplotly(p)
-  })
+  # # render bubble chart
+  # output$bubbleChart <- renderPlotly({
+  #   req(input$countryInput)
+  #   df1 <- data_aggregated %>%
+  #     filter(ProgramRegion %in% input$countryInput)
+  #   
+  #   p <- ggplot(df1, aes(x = ProgramRegion, y = Gender, size = Count, color = Gender)) +
+  #     geom_point(alpha = 0.6) +
+  #     scale_color_manual(values = c("F" = "#AD62AA", "M" = "#659DBD")) +
+  #     scale_size(range = c(3, 12)) +
+  #     labs(title = "Bubble Chart of Student Distribution by Region", x = "Region", y = "Gender")
+  #   
+  #   ggplotly(p)
+  # })
+  
   
   # FINANCE
   # Specify the desired order of CostValueComparison levels
